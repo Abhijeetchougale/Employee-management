@@ -2,14 +2,22 @@ import React, { useState } from 'react';
 import useEmployeeData from '../Utility/useEmployeeData';
 import useInputChange from '../Utility/useInputChange';
 import { postData, updateData, deleteData } from '../Services/Service';
-import EmployeeTabel from './Tabel/EmployeeTabel';
+import EmpTabel from './EmpTabel';
 
 
 const Employee = () => {
-    const employee = useEmployeeData();
-    const [isFormSubmitted, setIsFormSubmitted] = useState(false)
-
-    const empObj = useInputChange({
+    const { employeeList, getEmpData } = useEmployeeData();
+    const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+    // const header = ['empId'="Id",'empName'='Name', 'empContactNo'='Contact No.', 'empEmail'='Email', 'city'='City', 'salary'='Salary'];
+    const header = [
+        'empId',
+        'empName' ,
+        'empContactNo' ,
+        'empEmail' ,
+        'city',
+        'salary'
+    ];
+    const { obj, inputChange, reset, setObj } = useInputChange({
         empId: 0,
         empName: "",
         empContactNo: "",
@@ -25,89 +33,62 @@ const Employee = () => {
         accountNo: "",
         bankBranch: "",
         salary: 0
-    })
+    });
 
     const endPOST_URL = 'CreateEmployee';
     const endUPDATE_URL = 'UpdateEmployee';
     const endDELETE_URL = 'DeleteEmployeeByEmpId?empid=';
 
     const validateForm = () => {
-        return (
-            empObj.obj.empName !== '' &&
-            empObj.obj.empContactNo !== '' &&
-            empObj.obj.empAltContactNo !== '' &&
-            empObj.obj.empEmail !== '' &&
-            empObj.obj.city !== '' &&
-            empObj.obj.bankName !== '' &&
-            empObj.obj.bankBranch !== '' &&
-            empObj.obj.addressLine2 !== '' &&
-            empObj.obj.addressLine1 !== '' &&
-            empObj.obj.state !== '' &&
-            empObj.obj.ifsc !== '' &&
-            empObj.obj.accountNo !== '' &&
-            empObj.obj.pincode !== '' &&
-            empObj.obj.salary !== ''
-        );
-    }
+        // Add more specific validation logic here if needed
+        return Object.values(obj).every(value => value !== '');
+    };
+
+    const handleApiError = (error) => {
+        console.error('API error:', error);
+        alert('An error occurred. Please try again.');
+    };
+
+    const handleApiResult = (result) => {
+        if (result.result) {
+            alert(result.message);
+            getEmpData();
+            reset();
+        } else {
+            alert(result.message);
+        }
+    };
+//***************************CREATE DATA********************/
 
     const saveEmployee = () => {
         setIsFormSubmitted(true);
         if (validateForm()) {
-            postData(endPOST_URL, empObj.obj).then((result) => {
-                try {
-                    if (result.result) {
-                        alert(result.message);
-                        employee.getEmpData();
-                        empObj.reset();
-                    } else {
-                        alert(result.message)
-                    }
-                } catch (error) {
-                    alert(error.message)
-                }
-            })
+            postData(endPOST_URL, obj)
+                .then(handleApiResult)
+                .catch(handleApiError);
         }
+    };
 
-    }
-
-
-    const updateEmployee = () => {
-        updateData(endUPDATE_URL, empObj.obj).then((result) => {
-            try {
-                if (result.result) {
-                    alert(result.message);
-                    employee.getEmpData();
-                    empObj.reset();
-                } else {
-                    alert(result.message)
-                }
-            } catch (error) {
-                alert(error.message)
-            }
-        })
-    }
-
-
-    const deleteEmployee = (Id) => {
-        deleteData(endDELETE_URL, Id).then((result) => {
-            try {
-                if (result.result) {
-                    alert(result.message);
-                    employee.getEmpData();
-                    empObj.reset();
-                } else {
-                    alert(result.message)
-                }
-            } catch (error) {
-                alert(error.message)
-            }
-        })
-    }
-
+ //*************************UPDATE DATA*********************************/
+ const updateEmployee = () => {
+        updateData(endUPDATE_URL, obj)
+            .then(handleApiResult)
+            .catch(handleApiError);
+    };
+//**************************EDIT DATA********************************* */
 
     const onEditEmployee = (employee) => {
-        empObj.setObj(employee)
-    }
+        setObj(employee);
+    };
+//**************************DELETE DATA********************************* */
+
+    const deleteEmployee = (Id) => {
+        deleteData(endDELETE_URL, Id)
+            .then(handleApiResult)
+            .catch(handleApiError);
+    };
+
+   
 
 
     return (
@@ -119,27 +100,9 @@ const Employee = () => {
                             Employee List
                         </div>
                         <div className='rounded-lg'>
-                            <table className="w-[100%] table-auto rounded-lg border border-black">
-                                <thead>
-                                    <tr className=" text-2xl hover:bg-slate-600 bg-gray-400 ">
-                                        <th className="border border-slate-300 py-3 ">Sr.No</th>
-                                        <th className="border border-slate-300 py-3 ">Name</th>
-                                        <th className="border border-slate-300 py-3 ">Contact No</th>
-                                        <th className="border border-slate-300 py-3 ">Email</th>
-                                        <th className="border border-slate-300 py-3 ">City</th>
-                                        <th className="border border-slate-300 py-3 ">Salary</th>
-                                        <th className="border border-slate-300 py-3 ">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {
-                                        employee.employeeList.map((employee, ind) =>
-                                            <EmployeeTabel employeeData={employee} index={ind} onEditData={onEditEmployee} onDeleteData={deleteEmployee} />
+                            
+                            <EmpTabel tabelData={employeeList} editData={onEditEmployee} deleteData={deleteEmployee} columns={header}/>
 
-                                        )}
-
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -152,124 +115,124 @@ const Employee = () => {
                             <div className='grid grid-cols-2 gap-x-4'>
                                 <div>
                                     <label className='text-xl'>Name</label>
-                                    <input type="text" value={empObj.obj.empName} onChange={empObj.inputChange} name="empName" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full'placeholder='Enter Name'/>
+                                    <input type="text" value={obj.empName} onChange={inputChange} name="empName" className='form-control inputStyle' placeholder='Enter Name' />
                                     {
-                                    isFormSubmitted && empObj.obj.empName === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.empName === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Contact No.</label>
-                                    <input type="text" value={empObj.obj.empContactNo} onChange={empObj.inputChange} name='empContactNo' className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full'placeholder='Enter Contact Number'/>
+                                    <input type="text" value={obj.empContactNo} onChange={inputChange} name='empContactNo' className='form-control inputStyle' placeholder='Enter Contact Number' />
                                     {
-                                    isFormSubmitted && empObj.obj.empContactNo === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.empContactNo === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>Alternate Contact No</label>
-                                    <input type="text" value={empObj.obj.empAltContactNo} onChange={empObj.inputChange} name='empAltContactNo' className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Alternate Contact No.' />
+                                    <input type="text" value={obj.empAltContactNo} onChange={inputChange} name='empAltContactNo' className='form-control inputStyle' placeholder='Enter Alternate Contact No.' />
                                     {
-                                    isFormSubmitted && empObj.obj.empAltContactNo === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.empAltContactNo === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Email</label>
-                                    <input type="text" value={empObj.obj.empEmail} onChange={empObj.inputChange} name="empEmail" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Email'/>
+                                    <input type="text" value={obj.empEmail} onChange={inputChange} name="empEmail" className='form-control inputStyle' placeholder='Enter Email' />
                                     {
-                                    isFormSubmitted && empObj.obj.empEmail === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.empEmail === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>Address 1</label>
-                                    <input type="text" value={empObj.obj.addressLine1} onChange={empObj.inputChange} name="addressLine1" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Address 1'/>
+                                    <input type="text" value={obj.addressLine1} onChange={inputChange} name="addressLine1" className='form-control inputStyle' placeholder='Enter Address 1' />
                                     {
-                                    isFormSubmitted && empObj.obj.addressLine1 === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.addressLine1 === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Address 2</label>
-                                    <input   type="text" value={empObj.obj.addressLine2} onChange={empObj.inputChange} name="addressLine2" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Address 2' />
+                                    <input type="text" value={obj.addressLine2} onChange={inputChange} name="addressLine2" className='form-control inputStyle' placeholder='Enter Address 2' />
                                     {
-                                    isFormSubmitted && empObj.obj.addressLine2 === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.addressLine2 === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>Pin Code</label>
-                                    <input type="text" value={empObj.obj.pincode} onChange={empObj.inputChange} name="pincode" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Pin Code' />
+                                    <input type="text" value={obj.pincode} onChange={inputChange} name="pincode" className='form-control inputStyle' placeholder='Enter Pin Code' />
                                     {
-                                    isFormSubmitted && empObj.obj.pincode === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.pincode === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>City</label>
-                                    <input type="text" value={empObj.obj.city} onChange={empObj.inputChange} name="city" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter City' />
+                                    <input type="text" value={obj.city} onChange={inputChange} name="city" className='form-control inputStyle' placeholder='Enter City' />
                                     {
-                                    isFormSubmitted && empObj.obj.city === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.city === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>State</label>
-                                    <input type="text" value={empObj.obj.state} onChange={empObj.inputChange} name="state" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter State' />
+                                    <input type="text" value={obj.state} onChange={inputChange} name="state" className='form-control inputStyle' placeholder='Enter State' />
                                     {
-                                    isFormSubmitted && empObj.obj.state === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.state === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Bank Name</label>
-                                    <input type="text" value={empObj.obj.bankName} onChange={empObj.inputChange} name='bankName' className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Bank Name' />
+                                    <input type="text" value={obj.bankName} onChange={inputChange} name='bankName' className='form-control inputStyle' placeholder='Enter Bank Name' />
                                     {
-                                    isFormSubmitted && empObj.obj.bankName === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.bankName === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>IFSC Code</label>
-                                    <input type="text" value={empObj.obj.ifsc} onChange={empObj.inputChange} name="ifsc" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter IFSC Code' />
+                                    <input type="text" value={obj.ifsc} onChange={inputChange} name="ifsc" className='form-control inputStyle' placeholder='Enter IFSC Code' />
                                     {
-                                    isFormSubmitted && empObj.obj.ifsc === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.ifsc === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Account Number</label>
-                                    <input type="text" value={empObj.obj.accountNo} onChange={empObj.inputChange} name="accountNo" className='form-control hover:(bg-sky-10 border-b-orange-600)  w-full' placeholder='Enter Account Number' />
+                                    <input type="text" value={obj.accountNo} onChange={inputChange} name="accountNo" className='form-control hover:(bg-sky-10 border-b-orange-600)  w-full' placeholder='Enter Account Number' />
                                     {
-                                    isFormSubmitted && empObj.obj.accountNo === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.accountNo === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-2 gap-x-4 mt-4'>
                                 <div>
                                     <label className='text-xl'>Bank Branch</label>
-                                    <input type="text" value={empObj.obj.bankBranch} onChange={empObj.inputChange} name='bankBranch' className='form-control  hover:border-b-orange-600 hover:bg-sky-100 hover:bg-sky-100 w-full' placeholder='Enter Bank Branch' />
+                                    <input type="text" value={obj.bankBranch} onChange={inputChange} name='bankBranch' className='form-control  hover:border-b-orange-600 hover:bg-sky-100 hover:bg-sky-100 w-full' placeholder='Enter Bank Branch' />
                                     {
-                                    isFormSubmitted && empObj.obj.bankBranch === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.bankBranch === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                                 <div>
                                     <label className='text-xl'>Salary</label>
-                                    <input type="text" value={empObj.obj.salary} onChange={empObj.inputChange} name="salary" className='form-control  hover:border-b-orange-600 hover:bg-sky-100 w-full' placeholder='Enter Salary' />
+                                    <input type="text" value={obj.salary} onChange={inputChange} name="salary" className='form-control inputStyle' placeholder='Enter Salary' />
                                     {
-                                    isFormSubmitted && empObj.obj.salary === '' && <div className='text-danger'>This field is required</div>
+                                        isFormSubmitted && obj.salary === '' && <div className='text-danger'>This field is required</div>
                                     }
                                 </div>
                             </div>
                             <div className='grid grid-cols-1 gap-x-4 mt-4  '>
                                 <div className='flex justify-evenly'>
-                                    {empObj.obj.empId === 0 ?
-                                        <button className='py-2 px-4 text-xl  bg-green-600 border-solid rounded-lg hover:bg-green-800' onClick={saveEmployee}>Add</button> :
-                                        <button className='py-2 px-4 text-xl  bg-yellow-600 border-solid rounded-lg hover:bg-yellow-800' onClick={updateEmployee}>Update</button>
+                                    {obj.empId === 0 ?
+                                        <button className='editButton' onClick={saveEmployee}>Add</button> :
+                                        <button className='updateButton' onClick={updateEmployee}>Update</button>
                                     }
-                                    <button className='py-2 px-4 text-xl  bg-red-400 border-solid rounded-lg hover:bg-red-800' onClick={empObj.reset}>Reset</button>
+                                    <button className='resetButton' onClick={reset}>Reset</button>
                                 </div>
-                                
+
                             </div>
                         </div>
                     </div>
@@ -302,7 +265,7 @@ export default Employee;
 //     })
 // }
 
-// const [empObj.obj, setEmployeeObj] = useState({
+// const [obj, setEmployeeObj] = useState({
 //     empId: 0,
 //     empName: "",
 //     empContactNo: "",
@@ -320,7 +283,7 @@ export default Employee;
 //     salary: 0
 // })
 
-// const empObj.inputChange = (event) => {
+// const inputChange = (event) => {
 //     const { name, value } = event.target
 //     setEmployeeObj((prevEmp) => ({ ...prevEmp, [name]: value }));
 // }
@@ -331,3 +294,22 @@ export default Employee;
 // className="border border-slate-300 py-3 hover:back"
 // className="border border-slate-300 py-3 hover:back"
 
+ {/* <table className="w-[100%] table-auto rounded-lg border border-black"> 
+                                <thead>
+                                    <tr className=" text-2xl hover:bg-slate-600 bg-gray-400 ">
+                                        <th className="border border-slate-300 py-3 ">Sr.No</th>
+                                        <th className="border border-slate-300 py-3 ">Name</th>
+                                        <th className="border border-slate-300 py-3 ">Contact No</th>
+                                        <th className="border border-slate-300 py-3 ">Email</th>
+                                        <th className="border border-slate-300 py-3 ">City</th>
+                                        <th className="border border-slate-300 py-3 ">Salary</th>
+                                        <th className="border border-slate-300 py-3 ">Action</th>
+                                    </tr>
+                                </thead>
+                                
+                                        {
+                                        employeeList.map((employee, ind) =>
+                                            <CommonTabel tabelData={employee} index={ind} editData={onEditEmployee} deleteData={deleteEmployee}  keyData={ dataKeys} />
+
+                                        )}                             
+                            </table>  */}

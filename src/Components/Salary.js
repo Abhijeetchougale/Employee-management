@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getData, postData, updateData, deleteData } from '../Services/Service';
 import useEmployeeData from '../Utility/useEmployeeData';
 import useInputChange from '../Utility/useInputChange';
-import {rowColors} from '../Constants/Constants'
-
+// import CommonTabel from './CommonTabel';
+import EmpTabel from './EmpTabel';
+import axios from 'axios'
 const Salary = () => {
 
     const [salaryList, setsalaryList] = useState([]);
 
     const { employeeList } = useEmployeeData()
-
-
+    const header = ['empName', 'salaryDate', 'totalAdvance', 'presentDays', 'salaryAmount']
 
     const { obj, inputChange, reset, setObj } = useInputChange({
         "salaryId": 0,
@@ -26,73 +26,78 @@ const Salary = () => {
     const endUPDATE_URL = 'UpdateSalary';
     const endDELETE_URL = 'DeleteSalaryById?salaryid=';
 
+
+
+
     useEffect(() => {
         getSalary();
-    }, [])
+    }, []);
 
+
+    const handleApiError = (error) => {
+        console.error('API error:', error);
+        alert('An error occurred. Please try again.');
+    };
+
+    const handleApiResult = (result) => {
+        if (result.result) {
+            alert(result.message);
+            getSalary();
+            reset();
+        } else {
+            alert(result.message);
+        }
+    };
+
+    //**************************GET DATA***********************/
 
     const getSalary = () => {
-        try {
-            getData(getURL_END).then((result) => {
-                setsalaryList(result)
-            })
-        } catch (error) {
-            alert(error.message)
-        }
-
+        getData(getURL_END)
+            .then((result) => setsalaryList(result))
+            .catch(handleApiError);
     }
 
+    //**************************CREATE DATA***********************/
 
     const onaddAdvance = () => {
-        postData(endPOST_URL, obj).then((result) => {
-            try {
-                if (result.result) {
-                    alert(result.message);
-                    getSalary();
-                    reset();
-                } else {
-                    alert(result.message)
-                }
-            } catch (error) {
-                alert(error.message)
-            }
-        })
+        postData(endPOST_URL, obj)
+            .then(handleApiResult)
+            .catch(handleApiError);
     }
+    //*************************UPDATE DATA*********************************/
 
     const onUpdateAdvance = () => {
-        updateData(endUPDATE_URL, obj).then((result) => {
-            try {
-                if (result.result) {
-                    alert(result.message);
-                    getSalary();
-                    reset();
-                } else {
-                    alert(result.message)
-                }
-            } catch (error) {
-                alert(error.message)
-            }
-        })
+        updateData(endUPDATE_URL, obj)
+            .then(handleApiResult)
+            .catch(handleApiError)
     }
+    //**************************EDIT DATA********************************* */
 
     const onEdit = (adv) => {
         setObj(adv)
     }
+    //**************************DELETE DATA********************************* */
 
     const onDeleteAdvance = (Id) => {
-        deleteData(endDELETE_URL, Id).then((result) => {
-            try {
-                if (result.result) {
-                    alert(result.message);
-                    getSalary();
-                    reset();
-                } else {
-                    alert(result.message)
-                }
-            } catch (error) {
-                alert(error.message)
-            }
-        })
+        deleteData(endDELETE_URL, Id)
+            .then(handleApiResult)
+            .catch(handleApiError);
+    }
+
+    const getAttenceByEmpId = async (event) => {
+        const attendance = await axios.get("https://onlinetestapi.gerasim.in/api/TeamSync/GetAllAttendanceByEmployeeId?empId=" + event.target.value);
+        const advance = await axios.get("https://onlinetestapi.gerasim.in/api/TeamSync/GetAllAdvanceByEmpId?empid=" + event.target.value);
+        debugger;
+        const totalPresentDays = attendance.data.data.length;
+        let totalDavAmt = 0;
+        for (let index = 0; index < advance.data.data.length; index++) {
+            totalDavAmt = totalDavAmt + advance.data.data[index].advanceAmount;
+        }
+        const perDaySalary = employeeList.find(m => m.empId == event.target.value).salary / 30;
+
+        const totalSalary = ((perDaySalary * totalPresentDays) - totalDavAmt).toFixed(2);
+
+
     }
 
 
@@ -101,58 +106,31 @@ const Salary = () => {
             <div className='container-fluid mx-auto px-4 w-[100%]'>
                 <div className='row mt-3'>
                     <div className='col-md-8 '>
-                        <div className='card'>
-                            <div className='rounded py-3  text-2xl font-bold bg-sky-400'>
-                                Employee List
+                        <div className='overflow-auto'>
+                            <div className='rounded py-3  text-2xl font-bold bg-green-300'>
+                                Salary Data
                             </div>
-                            <div className='rounded-md'>
-                                <table className="w-[100%] table-auto rounded-md border border-slate-400 bg-red-400">
-                                    <thead>
-                                        <tr>
-                                            <th className="border border-slate-300 ...">Sr.No</th>
-                                            <th className="border border-slate-300 ...">Employee Name</th>
-                                            <th className="border border-slate-300 ...">Salary Date</th>
-                                            <th className="border border-slate-300 ...">Total Advance</th>
-                                            <th className="border border-slate-300 ...">Present Days</th>
-                                            <th className="border border-slate-300 ...">Salary Amount</th>
-                                            Details
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            <div className='rounded-lg'>
 
-                                        {salaryList.map((salaryItem, index) => (
-                                            <tr key={salaryItem.advanceId} className={`${rowColors[index % rowColors.length]} `}>
-                                                <td className='border border-slate-300'>{index + 1}</td>
-                                                <td className='border border-slate-300'>{salaryItem.empName}</td>
-                                                <td className='border border-slate-300'>{salaryItem.salaryDate}</td>
-                                                <td className='border border-slate-300'>{salaryItem.totalAdvance}</td>
-                                                <td className='border border-slate-300'>{salaryItem.presentDays}</td>
-                                                <td className='border border-slate-300'>{salaryItem.salaryAmount}</td>
-                                                <td className='border border-slate-300'>
-                                                    <button className='btn btn-sm btn-success m-2' onClick={() => onEdit(salaryItem)}>Edit</button>
-                                                    <button className='btn btn-sm btn-danger m-2' onClick={() => onDeleteAdvance(salaryItem.salaryId)}>Delete</button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                <EmpTabel tabelData={salaryList} editData={onEdit} deleteData={onDeleteAdvance} columns={header} />
 
-                                        
-                                    </tbody>
-                                </table>
                             </div>
                         </div>
                     </div>
                     <div className='col-md-4'>
                         <div className='card'>
-                            <div className='card-header bg-pink'>
-                                Advance
+                            <div className='py-3 text-2xl bg-green-300 font-bold'>
+                                Salary Details
                             </div>
-                            <div className='card-body'>
-                                <div className='row'>
-                                    <div className='col-md-6'>
-                                        <label>Employee Id</label>
-                                        <select name="employeeId" id="" value={obj.employeeId} onChange={inputChange} className='form-select'>
+                            <div className='card-body  bg-indigo-200'>
+                                <div className='grid grid-cols-2 gap-x-4'>
+                                    <div >
+                                        <label className='text-xl'>Employee Id</label>
+                                        <select name="employeeId" id="" onChange={(event) => { getAttenceByEmpId(event) }} className='form-select inputStyle'>
+
                                             {
                                                 employeeList.map((employee) => {
+
                                                     return (
                                                         <option value={employee.empId}>{employee.empName}</option>
                                                     )
@@ -160,42 +138,41 @@ const Salary = () => {
                                             }
                                         </select>
                                     </div>
-                                    <div className='col-md-6'>
-                                        <label>Salary Date</label>
-                                        <input type="date"  value={obj.salaryDate} onChange={inputChange} name='salaryDate' className='form-control' />
+                                    <div >
+                                        <label className='text-xl'>Salary Date</label>
+                                        <input type="date" value={obj.salaryDate} onChange={inputChange} name='salaryDate' className='form-control  inputStyle' />
                                     </div>
                                 </div>
-                                <div className='row'>
-                                    <div className='col-md-6'>
-                                        <label>Total Advance</label>
-                                        <input type="text" value={obj.totalAdvance} onChange={inputChange} name="totalAdvance" className='form-control' />
+                                <div className='grid grid-cols-2 gap-x-4'>
+                                    <div >
+                                        <label className='text-xl'>Total Advance</label>
+                                        <input type="text" value={obj.totalAdvance} onChange={inputChange} name="totalAdvance" className='form-control  inputStyle' />
                                     </div>
-                                    <div className='col-md-6'>
-                                        <label>Present Days</label>
-                                        <input type="text" value={obj.presentDays} onChange={inputChange} name="presentDays" className='form-control' />
+                                    <div >
+                                        <label className='text-xl'>Present Days</label>
+                                        <input type="text" value={obj.presentDays} onChange={inputChange} name="presentDays" className='form-control  inputStyle' />
                                     </div>
                                 </div>
-                                <div className='row'>
-                                    <div className='col-md-6'>
-                                        <label>Salary Amount</label>
-                                        <input type="text" value={obj.salaryAmount} onChange={inputChange} name="salaryAmount" className='form-control' />
+                                <div className='grid grid-cols-2 gap-x-4'>
+                                    <div >
+                                        <label className='text-xl'>Salary Amount</label>
+                                        <input type="text" value={obj.salaryAmount} onChange={inputChange} name="salaryAmount" className='form-control  inputStyle' />
+                                    </div>
+
+                                </div>
+                                <div className='grid grid-cols-1 gap-x-4 mt-4 '>
+                                    <div className='flex justify-evenly'>
+                                        {obj.salaryId === 0 ?
+                                            <button className='editButton' onClick={onaddAdvance}>Add</button>
+                                            :
+                                            <button className='updateButton' onClick={onUpdateAdvance}>Update</button>
+                                        }
+                                        <button className='resetButton' onClick={reset}>Reset</button>
                                     </div>
 
                                 </div>
                             </div>
-                            <div className='card-footer'>
-                                <div className='text-center'>
-                                    {obj.salaryId === 0 ?
-                                        <button className='btn btn-sm btn-primary m-2' onClick={onaddAdvance}>Add</button>
-                                        :
-                                        <button className='btn btn-sm btn-warning m-2' onClick={onUpdateAdvance}>Update</button>
-                                    }
 
-
-                                    <button className='btn btn-sm btn-danger ' onClick={reset}>Reset</button>
-                                </div>
-
-                            </div>
                         </div>
 
                     </div>
@@ -209,3 +186,8 @@ export default Salary;
 
 
 
+// const getSalary = useCallback(() => {
+//     getData(getURL_END)
+//         .then((result) => setsalaryList(result))
+//         .catch(handleApiError);
+// }, [getURL_END]);
